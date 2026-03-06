@@ -14,14 +14,17 @@ interface ChatInputProps {
   isSuggesting?: boolean;
   isNewsModeEnabled?: boolean;
   onToggleNewsMode?: () => void;
+  appMode?: 'COUNCIL' | 'LAB';
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disabled, isSuggesting, isNewsModeEnabled, onToggleNewsMode }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disabled, isSuggesting, isNewsModeEnabled, onToggleNewsMode, appMode }) => {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // ... (keep existing useEffect)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,6 +68,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
+  
+  const isNewsOn = appMode === 'LAB' || isNewsModeEnabled;
+  const isNewsLocked = appMode === 'LAB';
 
   return (
     <div className="flex flex-col bg-black border-t border-zinc-800 p-4">
@@ -73,7 +79,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
           {attachments.map((att, i) => (
             <div key={i} className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 px-3 py-1 rounded-full text-xs font-mono text-zinc-300">
               <span className="truncate max-w-[150px]">{att.name}</span>
-              <button onClick={() => removeAttachment(i)} className="hover:text-white"><X size={14} /></button>
+              <button onClick={() => removeAttachment(i)} className="hover:text-[#F4F4F0]"><X size={14} /></button>
             </div>
           ))}
         </div>
@@ -82,14 +88,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
          {onToggleNewsMode && (
             <button
               type="button"
-              onClick={onToggleNewsMode}
+              onClick={!isNewsLocked ? onToggleNewsMode : undefined}
+              disabled={isNewsLocked}
               className={`text-[10px] font-mono uppercase tracking-widest px-2 py-1 border transition-all ${
-                isNewsModeEnabled 
+                isNewsOn 
                   ? 'bg-[#BFFF00]/10 border-[#BFFF00] text-[#BFFF00] shadow-[0_0_10px_rgba(191,255,0,0.2)]' 
                   : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-500'
-              }`}
+              } ${isNewsLocked ? 'cursor-not-allowed opacity-80' : ''}`}
             >
-              [ NEWS MODE: {isNewsModeEnabled ? 'ON' : 'OFF'} ]
+              [ NEWS MODE: {isNewsOn ? 'ON' : 'OFF'} ]
             </button>
          )}
       </div>
@@ -102,7 +109,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             disabled={disabled}
-            className="p-4 bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 transition-colors border border-zinc-700"
+            className="p-4 bg-zinc-900 text-zinc-400 hover:text-[#F4F4F0] hover:bg-zinc-800 disabled:opacity-50 transition-colors border border-zinc-700"
             title="More Options"
           >
             <Plus size={20} />
@@ -113,7 +120,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
               <button 
                 type="button" 
                 onClick={() => { fileInputRef.current?.click(); setIsMenuOpen(false); }} 
-                className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-800 text-sm text-left text-zinc-300 hover:text-white transition-colors"
+                className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-800 text-sm text-left text-zinc-300 hover:text-[#F4F4F0] transition-colors"
               >
                 <Paperclip size={16} /> Attach File
               </button>
@@ -122,7 +129,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
                   type="button" 
                   onClick={() => { onSuggest(text); setIsMenuOpen(false); }} 
                   disabled={isSuggesting || !text.trim()} 
-                  className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-800 text-sm text-left text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+                  className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-800 text-sm text-left text-zinc-300 hover:text-[#F4F4F0] transition-colors disabled:opacity-50"
                 >
                   <Sparkles size={16} className={isSuggesting ? "animate-pulse" : ""} /> Summon Experts
                 </button>
@@ -146,13 +153,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onSuggest, disable
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
           placeholder={disabled ? "The Council is speaking..." : "Submit a topic, link, or attach a document..."}
-          className="flex-1 bg-zinc-900 text-white font-mono text-sm p-4 rounded-none border border-zinc-700 focus:outline-none focus:border-white transition-colors disabled:opacity-50 min-w-0"
+          className="flex-1 bg-zinc-900 text-[#F4F4F0] font-mono text-sm p-4 rounded-none border border-zinc-700 focus:outline-none focus:border-[#F4F4F0] transition-colors disabled:opacity-50 min-w-0"
         />
 
         <button
           type="submit"
           disabled={disabled || (!text.trim() && attachments.length === 0)}
-          className="p-4 bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500 transition-colors font-mono font-bold uppercase tracking-widest shrink-0"
+          className="p-4 bg-[#F4F4F0] text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500 transition-colors font-mono font-bold uppercase tracking-widest shrink-0"
         >
           <SendHorizontal size={20} />
         </button>

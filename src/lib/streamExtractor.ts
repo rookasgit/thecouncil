@@ -1,3 +1,5 @@
+import { resilientJSONParse } from '../utils/jsonParser';
+
 /**
  * Safely extracts a field value from a potentially incomplete JSON string.
  * This is designed for real-time streaming where the JSON structure is not yet complete.
@@ -119,21 +121,7 @@ export function parseAgentResponse(fullText: string): { provocation: string, ful
  * Safely parses the final synthesizer response.
  */
 export function parseSynthesizerResponse(fullText: string): any {
-  try {
-    const startIndex = fullText.indexOf('{');
-    const endIndex = fullText.lastIndexOf('}');
-    
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      const jsonStr = fullText.substring(startIndex, endIndex + 1);
-      return JSON.parse(jsonStr);
-    }
-    
-    const cleanJsonString = fullText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanJsonString);
-  } catch (e) {
-    console.error('Failed to parse synthesizer JSON:', e);
-    return null;
-  }
+  return resilientJSONParse(fullText);
 }
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles } from 'lucide-react';
-import { ROLES, MODELS, UserSettings, CustomAgent, getActiveAgent } from '../agents';
+import { ROLES, LAB_ROLES, MODELS, UserSettings, CustomAgent, getActiveAgent } from '../agents';
 import { getAI, withRetry } from '../lib/gemini';
 
 interface Props {
@@ -11,9 +11,10 @@ interface Props {
   customAgents: CustomAgent[];
   onUpdateRole: (roleId: string, settings: any) => void;
   onUpdateCustomAgent: (agent: CustomAgent) => void;
+  appMode: 'COUNCIL' | 'LAB';
 }
 
-export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, roleSettings, customAgents, onUpdateRole, onUpdateCustomAgent }) => {
+export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, roleSettings, customAgents, onUpdateRole, onUpdateCustomAgent, appMode }) => {
   const [name, setName] = useState('');
   const [instruction, setInstruction] = useState('');
   const [model, setModel] = useState('');
@@ -38,9 +39,10 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
       setModel(agent.model || MODELS[2].id); // Default to Pro 3.1 for Synthesizer
       setColor(agent.color);
     } else {
-      const role = ROLES.find(r => r.id === agentId);
+      const currentRoles = appMode === 'LAB' ? LAB_ROLES : ROLES;
+      const role = currentRoles.find(r => r.id === agentId);
       if (role) {
-        const agent = getActiveAgent(agentId, roleSettings);
+        const agent = getActiveAgent(agentId, roleSettings, appMode);
         setName(agent.name);
         setInstruction(agent.systemInstruction);
         setModel(agent.model || MODELS[0].id);
@@ -131,8 +133,8 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
     <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col rounded-lg overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 shrink-0 bg-zinc-950">
-          <h2 className="text-xl font-mono font-bold tracking-widest uppercase text-white">Edit Persona</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <h2 className="text-xl font-mono font-bold tracking-widest uppercase text-[#F4F4F0]">Edit Persona</h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-[#F4F4F0] transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -146,7 +148,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={!isCustom}
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 disabled:opacity-50"
                 required
               />
             </div>
@@ -158,7 +160,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
                   type="button"
                   onClick={handleDeepResearch}
                   disabled={isGenerating || !name.trim()}
-                  className="text-[10px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors disabled:opacity-50"
+                  className="text-[10px] font-mono text-zinc-400 hover:text-[#F4F4F0] flex items-center gap-1 transition-colors disabled:opacity-50"
                 >
                   <Sparkles size={10} className={isGenerating ? "animate-pulse" : ""} /> 
                   {isGenerating ? 'Researching...' : 'Deep Research Prompt'}
@@ -167,7 +169,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
               <textarea 
                 value={instruction}
                 onChange={(e) => setInstruction(e.target.value)}
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 h-64 resize-none"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 h-64 resize-none"
                 required
                 disabled={isGenerating}
               />
@@ -178,7 +180,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
               >
                 {MODELS.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
@@ -192,14 +194,14 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
               type="button"
               onClick={onClose}
               disabled={isGenerating}
-              className="px-4 py-2 text-xs font-mono uppercase tracking-widest text-zinc-500 hover:text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-mono uppercase tracking-widest text-zinc-500 hover:text-[#F4F4F0] transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button 
               type="submit"
               disabled={isGenerating}
-              className="px-6 py-2 bg-white text-black font-mono font-bold uppercase tracking-widest hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-[#F4F4F0] text-black font-mono font-bold uppercase tracking-widest hover:bg-zinc-200 transition-colors disabled:opacity-50"
             >
               Save Changes
             </button>

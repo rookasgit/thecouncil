@@ -16,14 +16,14 @@ export const AgentResponseCard: React.FC<AgentResponseCardProps> = ({ provocatio
   return (
     <div className="flex flex-col gap-4">
       {/* Provocation - Large, Bold, Highly Legible */}
-      <div className="text-xl md:text-2xl font-bold text-white leading-tight tracking-tight">
+      <div className="text-lg md:text-lg font-bold text-[#F4F4F0] leading-tight tracking-tight">
         <TypewriterText text={provocation} isTyping={isTyping} />
       </div>
 
       {/* Toggle Button - Distinctive Rationale Trigger */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-500 hover:text-white mt-4 transition-colors w-fit flex items-center gap-2"
+        className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-500 hover:text-[#F4F4F0] mt-4 transition-colors w-fit flex items-center gap-2"
       >
         <span>{isExpanded ? '[ - HIDE RATIONALE ]' : '[ + EXPAND RATIONALE ]'}</span>
       </button>

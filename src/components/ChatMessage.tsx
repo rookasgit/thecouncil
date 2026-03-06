@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveAgent, UserSettings, CustomAgent, ROLES } from '../agents';
+import { getActiveAgent, UserSettings, CustomAgent, ROLES, LAB_ROLES } from '../agents';
 import { parseAgentResponse } from '../lib/streamExtractor';
 import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Paperclip, CheckCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Paperclip, CheckCircle, AlertTriangle, Loader2, RefreshCw, Link as LinkIcon, Globe, Gavel, Layout } from 'lucide-react';
 
 import { Synthesizer } from './Synthesizer';
 import { AgentResponseCard } from './AgentResponseCard';
@@ -80,6 +80,7 @@ export interface DeepDive {
 interface FactCheck {
   status: 'verifying' | 'verified' | 'warning' | 'error' | 'interpretation';
   text?: string;
+  sources?: { title: string, url: string }[];
 }
 
 interface ChatMessageProps {
@@ -100,6 +101,19 @@ interface ChatMessageProps {
   fullAnalysis?: string;
   tokenCount?: number;
   sessionTokens?: { agentInput: number, agentOutput: number, synthInput: number, synthOutput: number };
+  onRebuttal?: (messageId: string, targetAgentId: string, attackingAgentId: string) => void;
+  availableAgents?: string[];
+  allAgentsList?: (CustomAgent | ReturnType<typeof getActiveAgent>)[];
+  rebuttals?: {
+    id: string;
+    agentId: string;
+    text: string;
+    isTyping: boolean;
+  }[];
+  pendingInfographicPrompt?: string | null;
+  isGeneratingImage?: boolean;
+  onGenerateInfographic?: (messageId: string, prompt: string) => void;
+  imageUrl?: string;
 }
 
 const ParameterSlider: React.FC<{ 
@@ -144,7 +158,7 @@ const ParameterSlider: React.FC<{
           style={{ width: `${((localValue - min) / (max - min)) * 100}%`, backgroundColor: color }}
         />
         <div 
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-100 group-hover:scale-125"
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[#F4F4F0] rounded-full shadow-lg transition-all duration-100 group-hover:scale-125"
           style={{ left: `${((localValue - min) / (max - min)) * 100}%`, marginLeft: '-6px' }}
         />
       </div>
@@ -152,7 +166,18 @@ const ParameterSlider: React.FC<{
   );
 };
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTyping, settings, deepDives = [], onDeepDive, customAgents = [], attachments = [], factCheck, onRetry, onRegenerateWithFactCheck, onParameterChange, synthesizerData, fullAnalysis, tokenCount, sessionTokens }) => {
+// Helper to extract markdown links
+const extractLinks = (text: string) => {
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  const links: { title: string, url: string }[] = [];
+  let match;
+  while ((match = linkRegex.exec(text)) !== null) {
+    links.push({ title: match[1], url: match[2] });
+  }
+  return links;
+};
+
+export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTyping, settings, deepDives = [], onDeepDive, customAgents = [], attachments = [], factCheck, onRetry, onRegenerateWithFactCheck, onParameterChange, synthesizerData, fullAnalysis, tokenCount, sessionTokens, onRebuttal, availableAgents, allAgentsList, rebuttals, pendingInfographicPrompt, isGeneratingImage, onGenerateInfographic, imageUrl }) => {
   let agent = getActiveAgent(roleId, settings);
   let parameterConfig: { name: string, min: number, max: number, default: number } | null = null;
 
@@ -162,7 +187,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
   } else if (roleId.startsWith('custom-')) {
     parameterConfig = { name: 'Intensity', min: 0, max: 100, default: 50 };
   } else if (roleId !== 'user') {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = [...ROLES, ...LAB_ROLES].find(r => r.id === roleId);
     if (role?.parameter) {
       parameterConfig = role.parameter;
     } else {
@@ -178,6 +203,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
   const [showDeepDiveInput, setShowDeepDiveInput] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [showFactCheckDetails, setShowFactCheckDetails] = useState(false);
+  const [showGavelDropdown, setShowGavelDropdown] = useState(false);
   
   const safeText = text || '';
   const isError = safeText.startsWith('[Connection lost]') || safeText.startsWith('[Synthesis failed]');
@@ -212,7 +238,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex flex-col h-full ${roleId === 'user' || roleId === 'synthesizer' ? 'col-span-full mb-8' : 'border border-zinc-800 p-4 bg-zinc-950/30'}`}
+      transition={{ duration: 0.3 }}
+      className={`flex flex-col h-full ${roleId === 'user' || roleId === 'synthesizer' ? 'col-span-full mb-8' : 'border border-zinc-800 p-4 bg-zinc-950/30 group relative'}`}
     >
       <div className={`flex items-center gap-2 mb-3 ${roleId === 'user' ? 'justify-end' : 'justify-start'}`}>
         {roleId !== 'user' && (
@@ -234,6 +261,43 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
           />
         )}
       </div>
+      
+      {/* Gavel Button (Absolute positioned) */}
+      {!isTyping && roleId !== 'user' && roleId !== 'synthesizer' && onRebuttal && (
+         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+           <div className="relative">
+             <button
+               onClick={() => setShowGavelDropdown(!showGavelDropdown)}
+               className="p-2 bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-[#F4F4F0] hover:border-zinc-500 rounded-full transition-all shadow-lg"
+               title="Rebut this argument"
+             >
+               <Gavel size={14} />
+             </button>
+             
+             {showGavelDropdown && (
+               <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-950 border border-zinc-800 rounded-lg shadow-xl overflow-hidden z-20">
+                 <div className="px-3 py-2 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+                   Select Attacker
+                 </div>
+                 {allAgentsList?.filter(a => a.id !== roleId && availableAgents?.includes(a.id)).map(agent => (
+                   <button
+                     key={agent.id}
+                     onClick={() => {
+                       onRebuttal(id, roleId, agent.id);
+                       setShowGavelDropdown(false);
+                     }}
+                     className="w-full text-left px-3 py-2 text-xs font-mono hover:bg-zinc-900 flex items-center gap-2 transition-colors"
+                     style={{ color: agent.color }}
+                   >
+                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: agent.color }} />
+                     {agent.name}
+                   </button>
+                 ))}
+               </div>
+             )}
+           </div>
+         </div>
+       )}
       
       <div 
         className={`w-full flex-1 ${roleId === 'user' ? 'text-right border-r-2 pr-4' : roleId === 'synthesizer' ? 'border-l-2 pl-4' : ''}`}
@@ -295,6 +359,71 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
           )}
         </div>
 
+        {/* Image Rendering (DISABLED) */}
+        {/*
+        {imageUrl && (
+          <div className="mt-4 mb-4">
+            <img 
+              src={imageUrl} 
+              alt="Strategic Infographic" 
+              className="w-full rounded-lg border border-zinc-800 shadow-2xl"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        )}
+        */}
+
+        {/* Loading State (DISABLED) */}
+        {/*
+        {isGeneratingImage && roleId === 'synthesizer' && (
+           <div className="mt-4 mb-4 h-64 w-full bg-zinc-900/50 border border-zinc-800 animate-pulse flex flex-col items-center justify-center gap-4">
+              <div className="w-12 h-12 border-4 border-[#FFD100]/30 border-t-[#FFD100] rounded-full animate-spin"></div>
+              <div className="text-[#FFD100] font-mono text-xs uppercase tracking-widest animate-pulse">
+                 GENERATING VISUAL SYNTHESIS...
+              </div>
+           </div>
+        )}
+        */}
+
+        {/* Infographic Generation Button (DISABLED) */}
+        {/*
+        {roleId === 'synthesizer' && pendingInfographicPrompt && !imageUrl && !isGeneratingImage && onGenerateInfographic && (
+          <div className="mt-6 pt-6 border-t border-zinc-800">
+            <button
+              onClick={() => onGenerateInfographic(id, pendingInfographicPrompt)}
+              className="w-full py-4 bg-[#FFD100]/30 border border-[#FFD100]/50 text-[#FFD100] font-mono font-bold uppercase tracking-[0.2em] hover:bg-[#FFD100] hover:text-black transition-all flex items-center justify-center gap-3 group"
+            >
+              <Layout size={20} />
+              VISUAL SYNTHESIS
+            </button>
+          </div>
+        )}
+        */}
+
+        {/* Evidence Chips */}
+        {!isTyping && roleId !== 'user' && roleId !== 'synthesizer' && (
+          (() => {
+            const links = extractLinks(fullAnalysisText || text);
+            if (links.length === 0) return null;
+            return (
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {links.map((link, i) => (
+                  <a 
+                    key={i}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 border border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 text-xs text-zinc-400 p-2 rounded whitespace-nowrap transition-colors"
+                  >
+                    <LinkIcon size={12} />
+                    <span className="max-w-[200px] truncate">{link.title}</span>
+                  </a>
+                ))}
+              </div>
+            );
+          })()
+        )}
+
         {isError && onRetry && (
           <div className="mt-4 pt-3 border-t border-zinc-800/50">
             <button 
@@ -318,7 +447,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
                 </div>
               )}
               {factCheck.status === 'verified' && (
-                <div className="flex items-center gap-2 text-emerald-500 text-xs font-mono uppercase tracking-widest">
+                <div className="flex items-center gap-2 text-[#005A9C] text-xs font-mono uppercase tracking-widest">
                   <CheckCircle size={12} />
                   <span>Verified Accurate</span>
                 </div>
@@ -337,7 +466,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
                   {onRegenerateWithFactCheck && (
                     <button 
                       onClick={() => onRegenerateWithFactCheck(id)}
-                      className="flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-mono uppercase tracking-widest transition-colors border border-zinc-800 px-2 py-1 rounded hover:bg-zinc-900"
+                      className="flex items-center gap-2 text-zinc-400 hover:text-[#F4F4F0] text-xs font-mono uppercase tracking-widest transition-colors border border-zinc-800 px-2 py-1 rounded hover:bg-zinc-900"
                     >
                       <RefreshCw size={12} />
                       <span>Regenerate with Corrections</span>
@@ -363,7 +492,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
             </div>
             
             <AnimatePresence>
-              {showFactCheckDetails && factCheck.text && (
+              {showFactCheckDetails && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -375,9 +504,55 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
                   }`}
                 >
                   <Markdown>{factCheck.text}</Markdown>
+                  
+                  {/* Render Sources */}
+                  {factCheck.sources && factCheck.sources.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-[#F4F4F0]/10 flex flex-wrap gap-2">
+                      <span className="text-[10px] uppercase opacity-50 w-full mb-1">Verified Sources:</span>
+                      {factCheck.sources.map((source, idx) => (
+                        <a 
+                          key={idx}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 bg-black/20 hover:bg-black/40 px-2 py-1 rounded text-[10px] transition-colors border border-[#F4F4F0]/10"
+                        >
+                          <Globe size={10} />
+                          <span className="truncate max-w-[150px]">{source.title}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* Rebuttals Rendering */}
+        {rebuttals && rebuttals.length > 0 && (
+          <div className="mt-4 space-y-3 pl-4 border-l-2 border-red-500/20">
+            {rebuttals.map(rebuttal => {
+              const attacker = allAgentsList?.find(a => a.id === rebuttal.agentId);
+              return (
+                <motion.div 
+                  key={rebuttal.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-sm"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Gavel size={12} className="text-red-500" />
+                    <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: attacker?.color }}>
+                      {attacker?.name || 'Unknown'} Rebuttal
+                    </span>
+                  </div>
+                  <div className="text-zinc-400 italic">
+                    <TypewriterText text={rebuttal.text} isTyping={rebuttal.isTyping} />
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         )}
 
@@ -387,7 +562,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
             {!showDeepDiveInput ? (
               <button 
                 onClick={() => setShowDeepDiveInput(true)}
-                className="text-xs font-mono uppercase tracking-widest flex items-center gap-1 hover:text-white transition-colors"
+                className="text-xs font-mono uppercase tracking-widest flex items-center gap-1 hover:text-[#F4F4F0] transition-colors"
                 style={{ color: agent.color }}
               >
                 <Search size={14} />
@@ -400,21 +575,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="Enter concept..."
-                  className="bg-black border border-zinc-800 text-white text-xs font-mono p-2 w-full focus:outline-none focus:border-zinc-500"
+                  className="bg-black border border-zinc-800 text-[#F4F4F0] text-xs font-mono p-2 w-full focus:outline-none focus:border-zinc-500"
                   autoFocus
                 />
                 <div className="flex gap-2">
                   <button 
                     type="submit"
                     disabled={!keyword.trim()}
-                    className="flex-1 py-2 bg-white text-black text-xs font-mono font-bold uppercase disabled:opacity-50"
+                    className="flex-1 py-2 bg-[#F4F4F0] text-black text-xs font-mono font-bold uppercase disabled:opacity-50"
                   >
                     Dive
                   </button>
                   <button 
                     type="button"
                     onClick={() => setShowDeepDiveInput(false)}
-                    className="flex-1 py-2 text-zinc-500 text-xs font-mono uppercase hover:text-white border border-zinc-800"
+                    className="flex-1 py-2 text-zinc-500 text-xs font-mono uppercase hover:text-[#F4F4F0] border border-zinc-800"
                   >
                     Cancel
                   </button>
@@ -437,7 +612,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ id, roleId, text, isTy
                 >
                   <div className="text-xs font-mono uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: agent.color }}>
                     <Search size={12} />
-                    Diving into: <span className="text-white">"{dd.keyword}"</span>
+                    Diving into: <span className="text-[#F4F4F0]">"{dd.keyword}"</span>
                   </div>
                   <div className="font-mono text-sm leading-relaxed text-gray-400 markdown-body">
                     <TypewriterText text={dd.text} isTyping={dd.isTyping} />

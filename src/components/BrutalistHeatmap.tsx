@@ -28,20 +28,20 @@ export const BrutalistHeatmap: React.FC<BrutalistHeatmapProps> = ({ data, agents
   };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[300px] inline-block">
+    <div className="w-full overflow-x-auto pb-6 custom-scrollbar">
+      <div className="min-w-max pr-4">
         {/* Grid Container */}
         <div 
           className="grid gap-1"
           style={{ 
-            gridTemplateColumns: `auto repeat(${agents.length}, minmax(40px, 1fr))` 
+            gridTemplateColumns: `minmax(120px, auto) repeat(${agents.length}, 1fr)` 
           }}
         >
           {/* Header Row */}
-          <div className="h-8"></div> {/* Empty top-left corner */}
+          <div className="h-32"></div> {/* Empty top-left corner */}
           {agents.map((agent, i) => (
-            <div key={`col-${i}`} className="h-8 flex items-end justify-center pb-1">
-              <span className="text-[10px] font-mono uppercase tracking-tighter text-zinc-500 -rotate-45 origin-bottom-left translate-x-2 w-max">
+            <div key={`col-${i}`} className="h-32 flex items-end justify-center mb-2 relative">
+              <span className="absolute bottom-0 left-1/2 transform -rotate-45 origin-bottom-left text-[10px] font-mono uppercase tracking-tighter text-zinc-500 whitespace-nowrap">
                 {agent}
               </span>
             </div>
@@ -51,8 +51,8 @@ export const BrutalistHeatmap: React.FC<BrutalistHeatmapProps> = ({ data, agents
           {agents.map((rowAgent, rowIndex) => (
             <React.Fragment key={`row-${rowIndex}`}>
               {/* Row Label */}
-              <div className="flex items-center justify-end pr-2">
-                <span className="text-[10px] font-mono uppercase tracking-tighter text-zinc-500 text-right">
+              <div className="flex items-center justify-end pr-3 h-16">
+                <span className="text-[10px] font-mono uppercase tracking-tighter text-zinc-500 text-right break-words" title={rowAgent}>
                   {rowAgent}
                 </span>
               </div>
@@ -68,7 +68,7 @@ export const BrutalistHeatmap: React.FC<BrutalistHeatmapProps> = ({ data, agents
                 // Self-intersection is always neutral/empty
                 if (rowAgent === colAgent) {
                   return (
-                    <div key={`${rowIndex}-${colIndex}`} className="aspect-square bg-zinc-900/50 border border-zinc-800/50" />
+                    <div key={`${rowIndex}-${colIndex}`} className="w-full h-16 bg-zinc-900/50 border border-zinc-800/50" />
                   );
                 }
 
@@ -78,7 +78,7 @@ export const BrutalistHeatmap: React.FC<BrutalistHeatmapProps> = ({ data, agents
                 return (
                   <div 
                     key={`${rowIndex}-${colIndex}`} 
-                    className={`aspect-square flex items-center justify-center border text-[10px] font-mono font-bold ${style}`}
+                    className={`w-full h-16 flex items-center justify-center border text-[10px] font-mono font-bold ${style}`}
                     title={`${rowAgent} vs ${colAgent}: ${score}`}
                   >
                     {point ? formatScore(score) : '-'}

@@ -2,6 +2,8 @@ import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import Markdown from 'react-markdown';
 import { BrutalistHeatmap } from './BrutalistHeatmap';
+import { SpectrumRadar } from './SpectrumRadar';
+import { LAB_ROLES, ROLES } from '../agents';
 
 interface AlignmentQuote {
   agents: string[];
@@ -22,9 +24,15 @@ interface HeatmapDataPoint {
   score: number;
 }
 
+interface RadarDataPoint {
+  axis: string;
+  [agentName: string]: string | number;
+}
+
 interface SynthesizerData {
   // New 4-part dashboard format
   heatmap_data?: HeatmapDataPoint[];
+  radar_data?: RadarDataPoint[];
   alignment_quotes?: AlignmentQuote[];
   fact_check?: FactCheckItem[];
   whitepaper_markdown?: string;
@@ -57,31 +65,50 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
     return Array.from(agents).sort();
   }, [data.heatmap_data]);
 
+  // Extract agent colors for the radar chart
+  const agentColors = React.useMemo(() => {
+    const colors: Record<string, string> = {};
+    const allRoles = [...ROLES, ...LAB_ROLES];
+    allRoles.forEach(role => {
+      role.thinkers.forEach(thinker => {
+        colors[thinker.name] = role.color;
+      });
+    });
+    return colors;
+  }, []);
+
   // ---------------------------------------------------------------------------
   // NEW: 4-Part Dashboard (Heatmap, Quotes, Fact Check, Whitepaper)
   // ---------------------------------------------------------------------------
-  if (data.heatmap_data || data.echarts_heatmap || data.fact_check || data.alignment_quotes) {
+  if (data.heatmap_data || data.radar_data || data.echarts_heatmap || data.fact_check || data.alignment_quotes) {
     return (
-      <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto p-6 bg-[#0a0a0a] text-white rounded-xl shadow-2xl border border-white/10 font-mono">
+      <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto p-6 bg-[#0a0a0a] text-[#F4F4F0] rounded-xl shadow-2xl border border-[#F4F4F0]/10 font-mono">
         
         {/* Header Section */}
-        <div className="border-b border-white/20 pb-6 flex justify-between items-end">
-          <div>
-            <h2 className="text-4xl font-bold tracking-tighter uppercase mb-2 text-white">
-              <span className="text-[#BFFF00] mr-4">///</span>
-              Synthesizer Dashboard
-            </h2>
-            <div className="text-xs text-gray-400 uppercase tracking-widest">
-              Meta-Analysis // Verification // Topology
-            </div>
+        <div className="border-b border-[#F4F4F0]/20 pb-6 relative mb-8">
+          {/* Status Indicator */}
+          <div className="text-xs font-mono text-[#BFFF00] mb-2 md:mb-0 md:absolute md:top-0 md:right-0 text-left md:text-right">
+            [ SYSTEM STATUS: ONLINE ]
           </div>
-          <div className="text-right">
-            <div className="text-[10px] text-gray-500 uppercase">System Status</div>
-            <div className="text-sm text-[#BFFF00] font-bold">ONLINE // SYNCHRONIZED</div>
+
+          {/* Title */}
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-[#F4F4F0] mb-2">
+            <span className="text-[#BFFF00] mr-4">///</span>
+            Synthesizer Dashboard
+          </h2>
+          <div className="text-xs text-gray-400 uppercase tracking-widest">
+            Meta-Analysis // Verification // Topology
           </div>
         </div>
 
-        {/* TOP SECTION: The Synthesis (Whitepaper) */}
+        {/* TOP SECTION: Spectrum Radar */}
+        {data.radar_data && data.radar_data.length > 0 && (
+          <div className="mb-8">
+            <SpectrumRadar data={data.radar_data} agentColors={agentColors} />
+          </div>
+        )}
+
+        {/* MIDDLE SECTION: The Synthesis (Whitepaper) */}
         <div className="mb-8">
           <h3 className="text-xs font-bold text-[#33FFFF] uppercase tracking-widest mb-4 border-l-2 border-[#33FFFF] pl-3">
             [ 01 ] Final Synthesis
@@ -92,9 +119,9 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
         </div>
 
         {/* MIDDLE SECTION: Fact Checker (High Contrast Ledger) */}
-        <div className="border border-white/10 rounded-xl overflow-hidden mb-8">
-          <div className="bg-white/5 p-3 border-b border-white/10 flex justify-between items-center">
-            <h3 className="text-xs font-bold text-white uppercase tracking-widest">
+        <div className="border border-[#F4F4F0]/10 rounded-xl overflow-hidden mb-8">
+          <div className="bg-[#F4F4F0]/5 p-3 border-b border-[#F4F4F0]/10 flex justify-between items-center">
+            <h3 className="text-xs font-bold text-[#F4F4F0] uppercase tracking-widest">
               [ 02 ] Fact_Verification_Audit
             </h3>
             <span className="text-[10px] text-gray-500">AUTO-GENERATED</span>
@@ -109,10 +136,10 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
                   <th className="p-4">Claim & Context</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-[#F4F4F0]/10">
                 {data.fact_check?.map((fact, idx) => (
-                  <tr key={idx} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-bold text-white">{fact.agent}</td>
+                  <tr key={idx} className="hover:bg-[#F4F4F0]/5 transition-colors">
+                    <td className="p-4 font-bold text-[#F4F4F0]">{fact.agent}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${
                         fact.verdict === 'VERIFIED' ? 'bg-[#BFFF00]/20 text-[#BFFF00]' :
@@ -143,37 +170,27 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
         {/* BOTTOM SECTION: Heatmap & Evidence (2 Columns) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* Left Column: Heatmap */}
-          <div className="bg-[#050505] border border-white/10 rounded-xl p-4 relative min-h-[400px] flex flex-col">
-            <div className="absolute top-4 left-4 text-[10px] text-gray-500 uppercase tracking-widest z-10">
-              [ 03 ] Interaction_Heatmap_v2.0
-            </div>
-            <div className="flex-1 flex items-center justify-center mt-8">
-              {data.heatmap_data && heatmapAgents.length > 0 ? (
+          {/* Left Column: Heatmap (Fallback if radar data is missing) */}
+          {data.heatmap_data && heatmapAgents.length > 0 && (
+            <div className="bg-[#050505] border border-[#F4F4F0]/10 rounded-xl p-4 relative min-h-[400px] flex flex-col">
+              <div className="absolute top-4 left-4 text-[10px] text-gray-500 uppercase tracking-widest z-10">
+                [ 03 ] Interaction_Heatmap_v2.0
+              </div>
+              <div className="flex-1 flex items-center justify-center mt-8">
                 <BrutalistHeatmap data={data.heatmap_data} agents={heatmapAgents} />
-              ) : data.echarts_heatmap ? (
-                 <ReactECharts
-                  option={data.echarts_heatmap}
-                  style={{ height: '400px', width: '100%' }}
-                  theme="dark"
-                />
-              ) : (
-                <div className="text-gray-600 text-xs uppercase">
-                  [ No Heatmap Data Available ]
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Right Column: Alignment Quotes */}
-          <div className="flex flex-col gap-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-[#0a0a0a] py-2 z-10 border-b border-white/10">
+          <div className={`flex flex-col gap-4 h-[400px] overflow-y-auto pr-2 custom-scrollbar ${!data.heatmap_data ? 'lg:col-span-2' : ''}`}>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-[#0a0a0a] py-2 z-10 border-b border-[#F4F4F0]/10">
               [ 04 ] Alignment_Log
             </h3>
             {data.alignment_quotes?.map((item, idx) => (
               <div 
                 key={idx} 
-                className={`p-4 border-l-2 bg-white/5 ${
+                className={`p-4 border-l-2 bg-[#F4F4F0]/5 ${
                   item.type === 'friction' 
                     ? 'border-[#FF003C] hover:bg-[#FF003C]/5' 
                     : 'border-[#BFFF00] hover:bg-[#BFFF00]/5'
@@ -181,8 +198,8 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
               >
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex gap-2">
-                    {item.agents.map((agent, i) => (
-                      <span key={i} className="text-[10px] bg-white/10 px-2 py-1 rounded uppercase text-gray-300">
+                    {item.agents && item.agents.map((agent, i) => (
+                      <span key={i} className="text-[10px] bg-[#F4F4F0]/10 px-2 py-1 rounded uppercase text-gray-300">
                         {agent}
                       </span>
                     ))}
@@ -197,7 +214,7 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
               </div>
             ))}
              {(!data.alignment_quotes || data.alignment_quotes.length === 0) && (
-               <div className="text-gray-600 text-xs uppercase p-4 text-center border border-dashed border-white/10">
+               <div className="text-gray-600 text-xs uppercase p-4 text-center border border-dashed border-[#F4F4F0]/10">
                  [ No Alignment Data Logged ]
                </div>
              )}
@@ -206,7 +223,7 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
 
         {sessionTokens && (
           <div className="mt-12 border-t border-gray-800 pt-4 text-xs font-mono text-gray-500 tracking-widest uppercase">
-            <div className="text-white font-bold">[ SYSTEM TELEMETRY ]</div>
+            <div className="text-[#F4F4F0] font-bold">[ SYSTEM TELEMETRY ]</div>
             <div className="flex justify-between mt-2">
               <span>COUNCIL INPUT (PROMPT): {sessionTokens.agentInput} T</span>
               <span>COUNCIL OUTPUT: {sessionTokens.agentOutput} T</span>
@@ -313,7 +330,7 @@ export function Synthesizer({ data, sessionTokens }: SynthesizerProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 bg-[#F4F4F0] rounded-xl shadow-sm border border-gray-100">
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1 w-full md:w-1/2">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Meta-Analysis Whitepaper</h2>

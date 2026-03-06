@@ -123,8 +123,8 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col rounded-lg overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 shrink-0 bg-zinc-950">
-          <h2 className="text-xl font-mono font-bold tracking-widest uppercase text-white">Add Custom Thinker</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <h2 className="text-xl font-mono font-bold tracking-widest uppercase text-[#F4F4F0]">Add Custom Thinker</h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-[#F4F4F0] transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -138,7 +138,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Carl Jung"
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
                 required
               />
             </div>
@@ -152,7 +152,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
                     type="button"
                     onClick={handleDeepResearch}
                     disabled={isGenerating || !name.trim()}
-                    className="text-[10px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors disabled:opacity-50"
+                    className="text-[10px] font-mono text-zinc-400 hover:text-[#F4F4F0] flex items-center gap-1 transition-colors disabled:opacity-50"
                   >
                     <Sparkles size={10} className={isGenerating ? "animate-pulse" : ""} /> 
                     {isGenerating ? 'Researching...' : 'Deep Research Prompt'}
@@ -163,7 +163,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
                 value={instruction}
                 onChange={(e) => setInstruction(e.target.value)}
                 placeholder="e.g., You are Carl Jung. Analyze the topic through the lens of the collective unconscious and archetypes. Keep it concise, around 100-150 words."
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 h-48 resize-none"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500 h-48 resize-none"
                 disabled={isGenerating}
               />
             </div>
@@ -173,7 +173,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full bg-black border border-zinc-800 text-white p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-mono text-sm focus:outline-none focus:border-zinc-500"
               >
                 {MODELS.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
@@ -189,7 +189,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
                     key={c}
                     type="button"
                     onClick={() => setColor(c)}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform ${color === c ? 'scale-110 border-white' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 transition-transform ${color === c ? 'scale-110 border-[#F4F4F0]' : 'border-transparent'}`}
                     style={{ backgroundColor: c }}
                   />
                 ))}
@@ -202,14 +202,14 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
               type="button"
               onClick={onClose}
               disabled={isGenerating}
-              className="px-4 py-2 text-xs font-mono uppercase tracking-widest text-zinc-500 hover:text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-mono uppercase tracking-widest text-zinc-500 hover:text-[#F4F4F0] transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button 
               type="submit"
               disabled={!name.trim() || isGenerating}
-              className="px-6 py-2 bg-white text-black font-mono font-bold uppercase tracking-widest hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-2 bg-[#F4F4F0] text-black font-mono font-bold uppercase tracking-widest hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {isGenerating ? <><Sparkles size={16} className="animate-pulse" /> Generating...</> : 'Add to Council'}
             </button>
