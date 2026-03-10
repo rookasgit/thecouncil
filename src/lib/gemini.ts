@@ -43,9 +43,9 @@ export async function fetchLiveContext(userPrompt: string): Promise<string> {
   try {
     const ai = getAI();
     
-    // Using gemini-2.5-flash which supports googleSearch grounding.
+    // Using gemini-3-pro-preview which supports googleSearch grounding.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-pro-preview",
       contents: userPrompt,
       config: {
         tools: [{ googleSearch: {} }],

@@ -230,7 +230,7 @@ export const LAB_ROLES: Role[] = [
 // The JSON instruction is now injected dynamically at the generation point in App.tsx
 
 export const MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast)' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast)' },
   { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Balanced)' },
   { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Deep Reasoning)' }
 ];
@@ -263,7 +263,7 @@ export const USER_AGENT: Agent = {
   name: 'You',
   color: '#888888',
   systemInstruction: '',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3-pro-preview',
   useSearch: false
 };
 
@@ -281,7 +281,7 @@ export const DEFAULT_SETTINGS: UserSettings = [...ROLES, ...LAB_ROLES].reduce((a
   acc[role.id] = {
     thinkerId: role.thinkers[0].id,
     parameterValue: role.parameter?.default ?? 50,
-    model: role.useSearch ? 'gemini-2.5-flash' : 'gemini-2.5-flash',
+    model: role.useSearch ? 'gemini-3-pro-preview' : 'gemini-3-pro-preview',
     isShadowCouncil: false
   };
   return acc;
@@ -331,7 +331,7 @@ ${thinker.baseInstruction}`;
     name: roleSettings?.isShadowCouncil ? `Shadow ${thinker.name}` : thinker.name,
     color: roleSettings?.isShadowCouncil ? '#FF0000' : role.color, // Red for Shadow Council
     systemInstruction: instruction,
-    model: roleSettings?.model || (role.useSearch ? 'gemini-2.5-flash' : 'gemini-2.5-flash'),
+    model: roleSettings?.model || (role.useSearch ? 'gemini-3-pro-preview' : 'gemini-3-pro-preview'),
     useSearch: role.useSearch
   };
 };

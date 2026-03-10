@@ -18,7 +18,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
   const [name, setName] = useState('');
   const [instruction, setInstruction] = useState('');
   const [color, setColor] = useState(COLORS[0]);
-  const [model, setModel] = useState(MODELS[0].id);
+  const [model, setModel] = useState(MODELS[1].id);
   const [isGenerating, setIsGenerating] = useState(false);
 
   if (!isOpen) return null;
@@ -116,7 +116,7 @@ export const CustomAgentModal: React.FC<Props> = ({ isOpen, onClose, onAdd }) =>
     setName('');
     setInstruction('');
     setColor(COLORS[0]);
-    setModel(MODELS[0].id);
+    setModel(MODELS[1].id);
   };
 
   return (

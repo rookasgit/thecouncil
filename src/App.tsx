@@ -177,10 +177,28 @@ export default function App() {
             initialConvs = [newConv];
           } else {
             // Already new format
-            initialConvs = parsed.map((c: any) => ({
-              ...c,
-              activeAgentIds: c.activeAgentIds || (c.mode === 'LAB' ? LAB_ROLES : ROLES).map(r => r.id)
-            }));
+            initialConvs = parsed.map((c: any) => {
+              const migratedRoleSettings = { ...c.roleSettings };
+              if (migratedRoleSettings) {
+                Object.keys(migratedRoleSettings).forEach(key => {
+                  if (migratedRoleSettings[key].model === 'gemini-2.5-flash') {
+                    migratedRoleSettings[key].model = 'gemini-3-flash-preview';
+                  }
+                });
+              }
+              const migratedCustomAgents = (c.customAgents || []).map((ca: any) => {
+                if (ca.model === 'gemini-2.5-flash') {
+                  return { ...ca, model: 'gemini-3-flash-preview' };
+                }
+                return ca;
+              });
+              return {
+                ...c,
+                roleSettings: migratedRoleSettings,
+                customAgents: migratedCustomAgents,
+                activeAgentIds: c.activeAgentIds || (c.mode === 'LAB' ? LAB_ROLES : ROLES).map(r => r.id)
+              };
+            });
           }
         }
       } catch (e) {
@@ -198,7 +216,14 @@ export default function App() {
     const savedSettings = localStorage.getItem(SETTINGS_KEY);
     if (savedSettings) {
       try {
-        setSettings(JSON.parse(savedSettings));
+        const parsedSettings = JSON.parse(savedSettings);
+        // Migrate old gemini-2.5-flash to gemini-3-flash-preview
+        Object.keys(parsedSettings).forEach(key => {
+          if (parsedSettings[key].model === 'gemini-2.5-flash') {
+            parsedSettings[key].model = 'gemini-3-flash-preview';
+          }
+        });
+        setSettings(parsedSettings);
       } catch (e) {
         console.error('Failed to parse saved settings', e);
       }
@@ -377,7 +402,7 @@ export default function App() {
 
     try {
       const response = await withRetry(() => getAI().models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-pro-preview',
         contents: `The user wants to discuss: "${topic}". Suggest 2 highly specific, niche, or relevant thinkers/personas to analyze this topic. Provide their name, a system instruction for them to act as this persona (around 100 words), and a hex color code that represents their vibe.`,
         config: {
           responseMimeType: "application/json",
@@ -405,7 +430,7 @@ export default function App() {
           name: s.name,
           color: s.color,
           systemInstruction: s.systemInstruction,
-          model: 'gemini-3-flash-preview'
+          model: 'gemini-3-pro-preview'
         }));
         
         return {
@@ -602,7 +627,7 @@ Return ONLY a valid JSON object with the following structure:
     }
 
     // Use a high-context model for the master call
-    const modelName = 'gemini-3-flash-preview'; 
+    const modelName = 'gemini-3-pro-preview'; 
     
     try {
       const responseStream = await withRetry(() => getAI().models.generateContentStream({
@@ -711,7 +736,7 @@ Return ONLY a valid JSON object with the following structure:
       const prompt = `You are ${attacker.name}. Target statement by ${targetAgentId}: '${targetMsg.text}'. TASK: Attack this specific statement. Find the logical fallacy or risk. Dismantle it in one sharp paragraph (under 60 words).`;
       
       const responseStream = await withRetry(() => getAI().models.generateContentStream({
-        model: attacker.model || 'gemini-3-flash-preview',
+        model: attacker.model || 'gemini-3-pro-preview',
         contents: prompt,
         config: {
           systemInstruction: attacker.systemInstruction,
@@ -823,7 +848,7 @@ Return ONLY a valid JSON object with the following structure:
         try {
           const activeAgentNames = allAvailableAgents.filter(a => activeAgentIds.includes(a.id)).map(a => a.name).join(', ');
           const factCheckResponse = await withRetry(() => getAI().models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview',
             contents: `You are a rigorous fact-checker for a debate between AI personas.
             The following analytical operatives generated this data: ${activeAgentNames}.
             
@@ -1065,7 +1090,7 @@ Return ONLY a valid JSON object with the following structure:
         }
 
         const responseStream = await withRetry(() => getAI().models.generateContentStream({
-          model: agent.model || 'gemini-3-flash-preview',
+          model: agent.model || 'gemini-3-pro-preview',
           contents: prompt,
           config,
         }));
@@ -1253,7 +1278,7 @@ Return ONLY a valid JSON object with the following structure:
       // Re-run Fact Check
       try {
         const factCheckResponse = await withRetry(() => getAI().models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-3-pro-preview',
           contents: `You are a rigorous fact-checker for a debate between AI personas (e.g., Baudrillard, Zizek, etc.).
           Your goal is to distinguish between **Objective Factual Errors** and **Persona Interpretations**.
 
@@ -1382,7 +1407,7 @@ The user has just adjusted your ${parameterName} parameter to ${newValue} out of
 Rewrite your response. You MUST maintain your exact core argument, analytical framework, and final conclusion. However, you must drastically shift your rhetorical style, tone, and vocabulary to reflect this new parameter value. Stay completely in character. Do not acknowledge this adjustment to the user; just deliver the modified response.`;
 
       const responseStream = await withRetry(() => getAI().models.generateContentStream({
-        model: agent.model || 'gemini-3-flash-preview',
+        model: agent.model || 'gemini-3-pro-preview',
         contents: prompt,
         config: {
           systemInstruction: agent.systemInstruction + "\n\nCRITICAL SYSTEM DIRECTIVE: You must output a valid JSON object with EXACTLY two keys: 'provocation' (a short quote under 250 chars) and 'full_analysis' (a deep multi-paragraph breakdown). Do not include markdown blocks.",
@@ -1471,7 +1496,7 @@ Rewrite your response. You MUST maintain your exact core argument, analytical fr
 
     try {
       const factCheckResponse = await withRetry(() => getAI().models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-pro-preview',
         contents: `You are a rigorous fact-checker for a debate between AI personas.
         Your goal is to distinguish between **Objective Factual Errors** and **Persona Interpretations**.
 
@@ -1570,7 +1595,7 @@ Rewrite your response. You MUST maintain your exact core argument, analytical fr
       const prompt = `You previously said: "${parentMsg.text}"\n\nThe user wants you to elaborate specifically on the concept of: "${keyword}". Provide a focused, deeper analysis of this specific point, maintaining your persona. Keep it concise, around 100 words.`;
       
       const responseStream = await withRetry(() => getAI().models.generateContentStream({
-        model: activeAgent.model || 'gemini-3-flash-preview',
+        model: activeAgent.model || 'gemini-3-pro-preview',
         contents: prompt,
         config: {
           systemInstruction: activeAgent.systemInstruction + "\n\nCRITICAL SYSTEM DIRECTIVE: You must output a valid JSON object with EXACTLY two keys: 'provocation' (a short quote under 250 chars) and 'full_analysis' (a deep multi-paragraph breakdown). Do not include markdown blocks.",
@@ -1742,7 +1767,7 @@ Rewrite your response. You MUST maintain your exact core argument, analytical fr
       try {
         const activeAgentNames = allAvailableAgents.filter(a => activeAgentIds.includes(a.id)).map(a => a.name).join(', ');
         const factCheckResponse = await withRetry(() => getAI().models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-3-pro-preview',
           contents: `You are a rigorous fact-checker for a debate between AI personas.
           The following analytical operatives generated this data: ${activeAgentNames}.
 
@@ -1934,7 +1959,7 @@ Rewrite your response. You MUST maintain your exact core argument, analytical fr
       /*
       try {
         const architectResponse = await getAI().models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-3-pro-preview',
           contents: [{ role: 'user', parts: [{ text: INFOGRAPHIC_ARCHITECT_PROMPT.replace('[SYNTHESIZER_TEXT]', fullText) }] }],
         });
 
@@ -2090,7 +2115,7 @@ Review these arguments strictly through your analytical lens. Identify ONE funda
 Write a concise rebuttal directly addressing that specific agent by name. Defend your worldview against theirs. Do not summarize the arguments; attack the intellectual friction point directly and sharply. Keep it under 200 words.`;
 
         const responseStream = await withRetry(() => getAI().models.generateContentStream({
-          model: agent.model || 'gemini-3-flash-preview',
+          model: agent.model || 'gemini-3-pro-preview',
           contents: prompt,
           config: {
             systemInstruction: agent.systemInstruction + "\n\nCRITICAL SYSTEM DIRECTIVE: You must output a valid JSON object with EXACTLY two keys: 'provocation' (a short quote under 250 chars) and 'full_analysis' (a deep multi-paragraph breakdown). Do not include markdown blocks.",
@@ -2252,7 +2277,7 @@ Use exactly these keys: {"full_analysis": "...", "provocation": "..."}.
       name: agent.name,
       color: ROLES.find(r => r.id === agent.roleId)?.color || '#FFFFFF',
       systemInstruction: expandedSystemPrompt,
-      model: 'gemini-1.5-flash' // I recommend Flash for these structured JSON tasks
+      model: 'gemini-3-flash-preview' // I recommend Flash for these structured JSON tasks
     };
   });
 
@@ -2273,7 +2298,7 @@ Use exactly these keys: {"full_analysis": "...", "provocation": "..."}.
 
     try {
       const response = await getAI().models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-pro-preview',
         contents: `The user needs a panel of 3 highly distinct, specialized thinkers (real or archetypal) to debate this topic: '${goal}'. Return a JSON object representing a Task Force.`,
         config: {
           responseMimeType: "application/json",

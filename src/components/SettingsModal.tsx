@@ -41,6 +41,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {appMode === 'COUNCIL' && (
+            <div className="border-b border-zinc-800 pb-8 mb-4">
+              <h3 className="text-sm font-mono uppercase tracking-widest text-[#F4F4F0] mb-2">Global Council Model</h3>
+              <p className="text-xs text-zinc-500 mb-4">Apply a specific model to all council personas for this session.</p>
+              <select 
+                onChange={(e) => {
+                  const newModel = e.target.value;
+                  if (!newModel) return;
+                  const newSettings = { ...settings };
+                  ROLES.forEach(role => {
+                    newSettings[role.id] = {
+                      ...(newSettings[role.id] || DEFAULT_SETTINGS[role.id]),
+                      model: newModel
+                    };
+                  });
+                  onSettingsChange(newSettings);
+                  e.target.value = "";
+                }}
+                className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-sans text-sm focus:outline-none focus:border-zinc-500"
+                defaultValue=""
+              >
+                <option value="" disabled>Select a model to apply to all...</option>
+                {MODELS.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {currentRoles.map(role => {
             const currentSettings = settings[role.id] || DEFAULT_SETTINGS[role.id];
             
@@ -65,7 +94,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">Model</label>
                     <select 
-                      value={currentSettings.model || 'gemini-3-flash-preview'}
+                      value={currentSettings.model || 'gemini-3-pro-preview'}
                       onChange={(e) => handleChange(role.id, 'model', e.target.value)}
                       className="w-full bg-black border border-zinc-800 text-[#F4F4F0] p-3 font-sans text-sm focus:outline-none focus:border-zinc-500"
                     >

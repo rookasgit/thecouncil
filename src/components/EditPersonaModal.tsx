@@ -29,7 +29,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
       if (ca) {
         setName(ca.name);
         setInstruction(ca.systemInstruction);
-        setModel(ca.model || MODELS[0].id);
+        setModel(ca.model || MODELS[1].id);
         setColor(ca.color);
       }
     } else if (agentId === 'synthesizer') {
@@ -45,7 +45,7 @@ export const EditPersonaModal: React.FC<Props> = ({ isOpen, onClose, agentId, ro
         const agent = getActiveAgent(agentId, roleSettings, appMode);
         setName(agent.name);
         setInstruction(agent.systemInstruction);
-        setModel(agent.model || MODELS[0].id);
+        setModel(agent.model || MODELS[1].id);
         setColor(agent.color);
       }
     }
